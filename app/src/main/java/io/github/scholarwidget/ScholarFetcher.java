@@ -16,8 +16,9 @@ public final class ScholarFetcher {
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) "
                     + "Chrome/130.0.0.0 Safari/537.36";
 
-    public static ScholarStats fetch() throws IOException {
-        HttpURLConnection c = (HttpURLConnection) new URL(Config.PROFILE_URL).openConnection();
+    public static ScholarStats fetch(String userId) throws IOException {
+        HttpURLConnection c =
+                (HttpURLConnection) new URL(Config.profileUrl(userId)).openConnection();
         try {
             c.setConnectTimeout(15000);
             c.setReadTimeout(20000);
@@ -29,6 +30,9 @@ public final class ScholarFetcher {
             int code = c.getResponseCode();
             if (code == 429 || code == 403) {
                 throw new IOException("Scholar is rate-limiting (HTTP " + code + ")");
+            }
+            if (code == 404) {
+                throw new IOException("Profile not found");
             }
             if (code != 200) {
                 throw new IOException("HTTP " + code);

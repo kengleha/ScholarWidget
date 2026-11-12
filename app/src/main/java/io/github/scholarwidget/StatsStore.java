@@ -15,9 +15,25 @@ public final class StatsStore {
     private static final String KEY_STATS = "stats";
     private static final String KEY_ERROR = "error";
     private static final String KEY_REFRESHING = "refreshing";
+    private static final String KEY_USER_ID = "user_id";
 
     private static SharedPreferences prefs(Context context) {
         return context.getApplicationContext().getSharedPreferences(PREFS, Context.MODE_PRIVATE);
+    }
+
+    /** The Scholar user ID to show; "" if none has been chosen. */
+    public static String getUserId(Context context) {
+        return prefs(context).getString(KEY_USER_ID, Config.DEFAULT_USER_ID);
+    }
+
+    /** Switches profile and forgets the previous profile's snapshot. */
+    public static void setUserId(Context context, String userId) {
+        prefs(context).edit()
+                .putString(KEY_USER_ID, userId)
+                .remove(KEY_STATS)
+                .remove(KEY_ERROR)
+                .putBoolean(KEY_REFRESHING, false)
+                .apply();
     }
 
     public static void save(Context context, ScholarStats s) {

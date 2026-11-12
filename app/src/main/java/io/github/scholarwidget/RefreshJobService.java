@@ -59,11 +59,23 @@ public class RefreshJobService extends JobService {
         new Thread(new Runnable() {
             @Override
             public void run() {
-                try {
-                    StatsStore.save(app, ScholarFetcher.fetch());
-                } catch (Exception e) {
-                    String message = e.getMessage();
-                    StatsStore.setError(app, message != null ? message : e.getClass().getSimpleName());
+                String userId = StatsStore.getUserId(app);
+                if (userId.isEmpty()) {
+                    StatsStore.setRefreshing(app, false);
+                } else {
+                    try {
+                        ScholarStats stats = ScholarFetcher.fetch(userId);
+                        // Discard the result if the profile was changed mid-fetch.
+                        if (userId.equals(StatsStore.getUserId(app))) {
+                            StatsStore.save(app, stats);
+                        }
+                    } catch (Exception e) {
+                        if (userId.equals(StatsStore.getUserId(app))) {
+                            String message = e.getMessage();
+                            StatsStore.setError(app,
+                                    message != null ? message : e.getClass().getSimpleName());
+                        }
+                    }
                 }
                 ScholarWidgetProvider.updateAll(app);
                 jobFinished(params, false);

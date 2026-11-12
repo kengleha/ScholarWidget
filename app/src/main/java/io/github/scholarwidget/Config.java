@@ -1,18 +1,22 @@
 package io.github.scholarwidget;
 
-/** The only things you should need to edit. */
+/** Build-time defaults. The profile itself is chosen in the app (see MainActivity). */
 public final class Config {
     private Config() {}
 
-    /** The "user=" value from the Google Scholar profile URL. */
-    public static final String USER_ID = "WkN17coAAAAJ";
-
-    public static final String PROFILE_URL =
-            "https://scholar.google.com/citations?hl=en&user=" + USER_ID;
+    /**
+     * Profile shown until the user enters one in the app: the "user=" value from a
+     * Google Scholar profile URL. Set to "" to start with no profile.
+     */
+    public static final String DEFAULT_USER_ID = "WkN17coAAAAJ";
 
     /**
      * How often the widget refreshes in the background. Scholar updates its counts
      * every few days and blocks clients that ask too often, so keep this long.
      */
     public static final int REFRESH_HOURS = 12;
+
+    public static String profileUrl(String userId) {
+        return "https://scholar.google.com/citations?hl=en&user=" + userId;
+    }
 }

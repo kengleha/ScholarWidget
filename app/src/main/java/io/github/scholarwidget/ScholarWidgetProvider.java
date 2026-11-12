@@ -21,7 +21,7 @@ public class ScholarWidgetProvider extends AppWidgetProvider {
     @Override
     public void onUpdate(Context context, AppWidgetManager manager, int[] appWidgetIds) {
         RefreshJobService.schedulePeriodic(context);
-        if (StatsStore.load(context) == null) {
+        if (StatsStore.load(context) == null && !StatsStore.getUserId(context).isEmpty()) {
             StatsStore.setRefreshing(context, true);
             RefreshJobService.requestNow(context);
         }
@@ -44,9 +44,11 @@ public class ScholarWidgetProvider extends AppWidgetProvider {
 
     /** Shows "Refreshing…" and starts a one-off fetch. */
     public static void refreshNow(Context context) {
-        StatsStore.setRefreshing(context, true);
+        if (!StatsStore.getUserId(context).isEmpty()) {
+            StatsStore.setRefreshing(context, true);
+            RefreshJobService.requestNow(context);
+        }
         updateAll(context);
-        RefreshJobService.requestNow(context);
     }
 
     /** Redraws every placed instance of the widget from the stored snapshot. */
@@ -60,9 +62,11 @@ public class ScholarWidgetProvider extends AppWidgetProvider {
 
     private static RemoteViews buildViews(Context context) {
         RemoteViews views = new RemoteViews(context.getPackageName(), R.layout.widget_scholar);
+        String userId = StatsStore.getUserId(context);
         ScholarStats s = StatsStore.load(context);
         String error = StatsStore.getError(context);
         boolean refreshing = StatsStore.isRefreshing(context);
+        String placeholder = context.getString(R.string.placeholder);
 
         if (s != null) {
             NumberFormat nf = NumberFormat.getIntegerInstance();
@@ -85,11 +89,21 @@ public class ScholarWidgetProvider extends AppWidgetProvider {
                 views.setViewVisibility(R.id.chart, View.GONE);
             }
         } else {
+            // No snapshot (first run, or the profile was just changed): blank everything.
+            views.setTextViewText(R.id.title, context.getString(R.string.app_name));
+            views.setTextViewText(R.id.citations, placeholder);
+            views.setTextViewText(R.id.hindex, placeholder);
+            views.setTextViewText(R.id.i10, placeholder);
+            views.setTextViewText(R.id.citations_since, "");
+            views.setTextViewText(R.id.hindex_since, "");
+            views.setTextViewText(R.id.i10_since, "");
             views.setViewVisibility(R.id.chart, View.GONE);
         }
 
         String status;
-        if (refreshing) {
+        if (userId.isEmpty()) {
+            status = "Tap to choose a Scholar profile";
+        } else if (refreshing) {
             status = "Refreshing…";
         } else if (s == null) {
             status = error != null ? "Failed: " + error + " (tap ↻ to retry)" : "Tap ↻ to load";
@@ -106,9 +120,14 @@ public class ScholarWidgetProvider extends AppWidgetProvider {
                 context, 0, refresh,
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE));
 
-        // Anywhere else -> open the profile in the browser.
-        Intent open = new Intent(Intent.ACTION_VIEW, Uri.parse(Config.PROFILE_URL))
-                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        // Anywhere else -> open the profile in the browser, or the app if none is set.
+        Intent open;
+        if (userId.isEmpty()) {
+            open = new Intent(context, MainActivity.class);
+        } else {
+            open = new Intent(Intent.ACTION_VIEW, Uri.parse(Config.profileUrl(userId)));
+        }
+        open.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         views.setOnClickPendingIntent(R.id.widget_root, PendingIntent.getActivity(
                 context, 1, open,
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE));
